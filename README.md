@@ -16,8 +16,9 @@ use KNC vector intrinsics from the Intel-Phi-LLVM clang (`-march=knc`).
 | YuNet in C, host | Matches OpenCV on all 12 output heads (max abs difference 1.98e-05) |
 | YuNet in C, card, scalar | Same check passes; 99.5 ms per frame on 118 threads |
 | YuNet in C, card, vector unit | Same check passes; 27.1-27.5 ms best, 29.3-35.9 ms mean per frame on 118 threads |
-| Faces checked against OpenCV | One frame with no faces so far; frames with faces not yet checked |
-| Host to card transport, tracker integration | Not started |
+| Faces checked against OpenCV | 300 live frames, 848 faces: all match on the host and on the card's vector unit (worst 0.0001 px, score 1.37e-06) |
+| Host to card transport (`card/pvd.c`, `host/phiv.c`) | Built and tested with the 300 frames x 3: 900 answers, 0 mismatches, round trip mean 34.6 ms (max 101.5 ms), 28.9 frames/s |
+| Tracker integration | Not done |
 
 Every number comes from `yunet-run` (host or card) or the tracker's own per-second profile; the card
 runs used 118 threads, two hardware threads on each of cores 0 to 58.
@@ -46,7 +47,12 @@ lib/onnx.c     ONNX protobuf reader (nodes, float and int64 initializers), no de
 lib/pool.c     persistent thread pool
 lib/yunet.c    the network: padded NCHW planes, KNC kernels under __KNC__, scalar otherwise;
                OpenCV's padding, decode and NMS
-tools/         yunet-run (run and compare), ocv-ref (OpenCV oracle), onnxdump (graph listing)
+lib/phiv-proto.h  layout of phi-vision's part of the shared host-memory region
+card/pvd.c     card daemon: frames in by card-owned DMA, YuNet on the vector unit, faces out
+card/cdma.c    card-owned SBOX DMA channel (from Intel-Phi-Worldgen)
+host/phiv.c    host client: post a frame, take the newest answer, never blocks
+tools/         yunet-run (run and compare), ocv-ref (OpenCV oracle), onnxdump (graph listing),
+               corpus-gate (C vs OpenCV on a frame corpus), pvtest (pvd end to end on a corpus)
 ref/           OpenCV 5.0.0 sources the pre- and post-processing follow (Apache-2.0)
 build.sh       host tools with cc; card binaries with the Intel-Phi-LLVM clang and knc-cc
 ```
